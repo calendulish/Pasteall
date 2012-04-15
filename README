@@ -1,0 +1,25 @@
+====== PastSlack ======
+
+PastSlack é um gerenciador de clipboard para o slackware, escrito
+com o intuito de substituir o ClipMan e o gerenciador integrado
+(xfce4-settings-helper) do xfce.
+
+O PastSlack é baseado no Pastie, um gerenciador de clipboard para
+ubuntu escrito por Felipe Morales.
+
+====== Objetivos =======
+
+O objetivo principal do PastSlack é permitir que você feche janelas
+e tenha certeza de que o conteúdo copiado se mantenha em seu clipboard.
+Existe várias ferramentas que fazem esta tarefa, mas são desnecessáriamente
+pesadas e/ou possuem recursos desnecessários. O PastSlack procura ser leve
+e realizar apenas a tarefa realmente necessária, que é a de 'segurar' a
+informação no clipboard.
+
+====== Interface ======
+
+Diferente de outros, o PastSlack não possue interface, ele roda como um daemon
+e atua em background no sistema, você nem percebe que ele está lá.
+
+
+*** Em desenvolvimento ***
