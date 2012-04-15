@@ -1,0 +1,347 @@
+#!/usr/bin/env python
+
+#    PastSlack - Um monitor de clipboard para o Slackware
+#    Copyright (C) 2012  Lara Maia <lara@craft.net.br>
+#
+#    Baseado em Pastie - a simple clipboard manager
+#    Copyright (C) 2010  Felipe Morales <hel.sheep@gmail.com>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Main
+import glib
+import gtk
+import gconf
+import os
+import os.path
+
+# History
+import gobject
+import gnomevfs #FIXME
+from fractions import Fraction #FIXME
+
+class ClipboardProtector(object):
+	def __init__(self):
+		self.clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_CLIPBOARD)
+		self.primary = gtk.clipboard_get(gtk.gdk.SELECTION_PRIMARY)
+
+		self.specials_text = ""
+		self.primary_text = ""
+
+		self.history = HistoryMenuItemCollector()
+		self.gconf_client = gconf.client_get_default()
+		self.clipboard.connect("owner-change", self.check)
+
+	def check(self, clipboard=None, event=None):
+		if not self.clipboard.wait_for_targets():
+			no_targetted_text = self.clipboard.wait_for_text()
+			if no_targetted_text != None: 
+				self.history.add(TextHistoryMenuItem(no_targetted_text))
+			else:
+				if self.history[0] != None:
+					self.history[0].set_as_current()
+		elif self.clipboard.wait_is_text_available():
+			clipboard_tmp = self.clipboard.wait_for_text()
+			if clipboard_tmp not in ("", None):
+				if 'PASS_TIMEOUT' in self.clipboard.wait_for_targets():
+					timeout = int(self.clipboard.wait_for_contents('PASS_TIMEOUT').data) * 1000
+					self.history.add(PasswordHistoryMenuItem(clipboard_tmp))
+					gobject.timeout_add(timeout, self.delete_current)
+				elif self.clipboard.wait_is_uris_available():
+					self.history.add(FileHistoryMenuItem(clipboard_tmp))
+				else:
+					self.history.add(TextHistoryMenuItem(clipboard_tmp))
+		elif self.clipboard.wait_is_image_available():
+			clipboard_contents = self.clipboard.wait_for_image()
+			self.history.add(ImageHistoryMenuItem(clipboard_contents))
+	
+	def check_specials(self):
+		targets = self.clipboard.wait_for_targets()
+		if targets != None:
+			if '_VIM_TEXT' in targets:
+				clipboard_tmp = self.clipboard.wait_for_text()
+				if clipboard_tmp not in ("", None) and clipboard_tmp != self.specials_text:
+					self.history.add(TextHistoryMenuItem(clipboard_tmp))
+					self.specials_text = clipboard_tmp
+		return True
+
+class HistoryMenuItem(gobject.GObject):
+	def __init__(self, item):
+		gobject.GObject.__init__(self)
+		self.payload = item
+
+	def get_label(self):
+		pass
+
+	def get_long_label(self, search=None):
+		pass
+
+	def set_as_current(self, event=None):
+		self.emit("select", self)
+
+class TextHistoryMenuItem(HistoryMenuItem):
+	def get_label(self):
+		length = 1
+		l = unicode(self.payload[:length+length]).strip(' ')
+		
+		if len(l) > length:
+			l = l[:length-1] + u'\u2026'
+
+		l = l.replace('\t', u'\u22c5')
+		l = l.replace('\n', u'\u21b2')
+		l = l.replace('_', '__')
+		
+		return l
+
+	def get_long_label(self, search=None):
+		def fill_string_around(source_string, center_string, maxsize):
+			l = center_string
+			start = source_string.find(l)
+			end = source_string.find(l) + len(l) -1
+			if len(source_string) < maxsize:
+				maxsize = len(source_string)
+			while len(l) < maxsize:
+				if start > 0: # we stop adding at the beggining if we get to the beggining of the source
+					start = start-1
+					new_s_char = source_string[start]
+					l = new_s_char + l
+				if end < len(source_string) - 1: # we stop adding at the end if we get to the end of the source
+					end = end + 1
+					new_e_char = source_string[end]
+					l = l + new_e_char
+
+			if start > 0: # the string beggining doesn't match the source beginning
+				l = u"\u2026" + l[1:]
+			if end < len(source_string)-1: # the string end doesn't match the source end
+				l = l[:len(l)-1] + u"\u2026"
+			return l
+
+		if search != None:
+			l = fill_string_around(self.payload, search, 70)
+			return l
+		else:
+			if len(self.payload) >= 70:
+				l = self.payload[:69] + u'\u2026'
+			else:
+				l = self.payload
+		
+		return l
+
+	def set_as_current(self, event=None):
+		HistoryMenuItem.set_as_current(self, event)
+		gtk.clipboard_get().set_text(self.payload)
+		gtk.clipboard_get().store()
+
+class FileHistoryMenuItem(HistoryMenuItem):
+	def get_label(self):
+		# this shortens a pair of strings proportionally given a size constraint.
+		def balanced_constraint_shorten(pair, constraint):
+			total_length_to_shorten = len(pair[0]) + len(pair[1])
+
+			if constraint < total_length_to_shorten:
+				size_to_reduce = abs(constraint - total_length_to_shorten)
+				
+				string_ratio = Fraction(len(pair[0]),len(pair[1])) #FIXME
+				first_ratio, second_ratio = string_ratio.numerator, string_ratio.denominator
+				total = string_ratio.denominator + string_ratio.numerator
+				
+				size_of_first_cut = (first_ratio * size_to_reduce / total) + 1
+				first_remainder_size = len(pair[0]) - size_of_first_cut
+				size_of_second_cut = (second_ratio * size_to_reduce / total) + 1
+				second_remainder_size = len(pair[1]) - size_of_second_cut
+
+				first_extreme_size = first_remainder_size/2
+				
+				if first_extreme_size == 0:
+					first_extreme_size = 1
+				
+				second_extreme_size = second_remainder_size/2
+				if second_extreme_size == 0:
+					second_extreme_size = 1
+
+				first = pair[0][:first_extreme_size] + u"\u2026" + pair[0][first_extreme_size+size_of_first_cut:]
+				if len(first) == len(pair[0]):
+					first = pair[0]
+				second = pair[1][:second_extreme_size] + u"\u2026" + pair[1][second_extreme_size+size_of_second_cut:]
+				if len(second) == len(pair[1]):
+					second = pair[1]
+				
+				# we might have missed it by 1
+				preliminary_lenght = len(first) + len(second)
+				if preliminary_lenght > constraint:
+					if len(first) > len(second):
+						first = pair[0][:first_extreme_size] + u"\u2026" + pair[0][first_extreme_size + \
+						size_of_first_cut + 1:]
+					elif len(second) > len(first):
+						second = pair[1][:second_extreme_size] + u"\u2026" + pair[1][second_extreme_size + \
+						size_of_second_cut + 1:]
+
+				return first, second
+			
+			else: # we don't have to shorten the pair
+				return pair
+
+		lines = self.payload.split("\n")
+		
+		# we want to see if there are more files than the one shown
+		if len(lines) > 1:
+			label = "  (+ " + str(len(lines)-1) + " " + _("more") + ") "
+		else:
+			label = ""
+		
+		# we'll want to see if it's a regular file or a dir
+		if os.path.isdir(lines[0]):
+			first_file_tail = "/"
+		else:
+			first_file_tail = ""
+		first_file = os.path.basename(lines[0]) + first_file_tail
+
+		# common_path is the folder where the copied files reside
+		if len(lines) == 1:
+			if os.path.dirname(lines[0]) == "/":
+				common_path = "/"
+			else:
+				common_path = os.path.dirname(lines[0]) + "/"
+		else:
+			common_path = os.path.dirname(os.path.commonprefix(lines)) + "/"
+		common_path = common_path.replace(os.path.expanduser("~"), "~")
+		path_list = common_path.split("/")
+		last = len(path_list)-2
+		for d in range(last):
+			try:
+				path_list[d] = path_list[d][0]
+			except IndexError:
+				pass
+		# we shorten the label, if it's needed
+		available = 500 - len(label) - len("/".join(path_list[:last-1])) - 5
+		first_file, path_list[last] = balanced_constraint_shorten((first_file, path_list[last]), available)
+
+		common_path = "/".join(path_list)
+
+		name_part = first_file + label
+		path_part = " [ " + common_path + " ]"
+		
+		l = u"\u25A4 " + name_part + path_part
+		l = l.replace("_", "__")
+		return l
+
+	def get_long_label(self, search=None):
+		return self.get_label()
+
+	def set_as_current(self, event=None):
+		def path_get(clipboard, selectiondata, info, path):
+			selectiondata.set_text(path)
+			files = path.split("\n")
+			file_paths = []
+			for copied_file in files:
+				file_path = gnomevfs.escape_path_string(copied_file) #FIXME
+				file_paths.append('file://' + file_path)
+			selectiondata.set_uris(file_paths)
+			selectiondata.set('x-special/gnome-copied-files', 8, 'copy\n' + '\n'.join(file_paths))
+
+		def path_clear(self, path):
+			return
+
+		HistoryMenuItem.set_as_current(self, event)
+		targets = gtk.target_list_add_uri_targets()
+		targets = gtk.target_list_add_text_targets(targets)
+		targets.append(('x-special/gnome-copied-files', 0, 0))
+
+		gtk.clipboard_get().set_with_data(targets, path_get, path_clear, self.payload)
+		gtk.clipboard_get().store()
+
+class ImageHistoryMenuItem(HistoryMenuItem):
+	def __init__(self, item):
+		gobject.GObject.__init__(self)
+		self.pixbuf = item
+		self.payload = self.pixbuf.get_pixels()
+	
+	def get_label(self):
+		l = u"\u25A3 [" + str(self.pixbuf.props.width) + u"\u2715" + str(self.pixbuf.props.height) + "]"
+		return l
+
+	def get_long_label(self, search=None):
+		return self.get_label()
+
+	def set_as_current(self, event=None):
+		HistoryMenuItem.set_as_current(self, event)
+		gtk.clipboard_get().set_image(self.pixbuf)
+		gtk.clipboard_get().store()
+
+class HistoryMenuItemCollector(gobject.GObject):
+	def __init__(self):
+		gobject.GObject.__init__(self)
+		self.iter_count = -1
+		self.data = []
+		self.maxlen = 1
+
+	def __len__(self):
+		return len(self.data)
+	
+	def __iter__(self):
+		return self
+
+	def next(self):
+		self.iter_count += 1
+		if self.iter_count == len(self.data):
+			self.iter_count = -1
+			raise StopIteration
+		else:
+			return self.data[self.iter_count]
+
+	def __getitem__(self, index):
+		try:
+			return self.data[index]
+		except:
+			return None
+
+	def exists(self,data):
+		for item in self:
+			if item.payload == data.payload:
+				return True
+		return False
+
+	def existing_index(self, data):
+		count = 0
+		for item in self:
+			if item.payload == data.payload:
+				return count
+			count = count + 1
+		return -1
+    
+	def add(self,data):
+		if not self.exists(data): 
+			if len(self.data) == 0: 
+				self.data.append(data)              
+			else:                    
+				tail = self.data[0:self.maxlen - 1]
+				for i in self.data: 
+					del i               
+				self.data = []          
+				self.data.append(data)     
+				for item in tail:
+					self.data.append(item)
+		else:
+			found_at = self.existing_index(data)
+			if found_at != -1:
+				self.select(self.data[found_at])
+
+def new_signal(label, class_name, flag=gobject.SIGNAL_ACTION, ret=None, args=(int,)):
+	gobject.signal_new(label, class_name, flag, ret, args)
+
+new_signal("select", HistoryMenuItem, args=(object,))
+
+if __name__ == "__main__":
+  clipboard_protector = ClipboardProtector()
+  gtk.main()
