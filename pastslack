@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- encoding: utf-8 -*-
 
 #    PastSlack - Um monitor de clipboard para o Slackware
 #    Copyright (C) 2012  Lara Maia <lara@craft.net.br>
@@ -30,6 +31,17 @@ import os.path
 import gobject
 import gnomevfs #FIXME
 from fractions import Fraction #FIXME
+
+# Notification
+try:
+	import pynotify
+	if pynotify.init("PastSlack"):
+		n = pynotify.Notification("PastSlack", "O gerenciador de clipboard foi iniciado")
+		n.show()
+	else:
+		print("Erro ao iniciar o módulo pynotify")
+except:
+	print("Módulo pynotify não encontrado. Ignorando.");
 
 class ClipboardProtector(object):
 	def __init__(self):
