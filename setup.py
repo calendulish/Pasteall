@@ -17,5 +17,5 @@ setup(
 	author_email = "lara@craft.net.br",
 	url = "http://github.com/mrk3004/PastSlack/",
 	license = "GNU GPL v3",
-	version = "0.0.1",
+	version = "0.0.2",
 	scripts = ["pastslack"])

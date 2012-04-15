@@ -21,5 +21,23 @@ informação no clipboard.
 Diferente de outros, o PastSlack não possue interface, ele roda como um daemon
 e atua em background no sistema, você nem percebe que ele está lá.
 
+====== Instalação ======
 
-*** Em desenvolvimento ***
+1) Construa:
+python setup.py build
+
+2) Instale:
+sudo python setup.py install
+
+O PastSlack pode ser acessado pelo comando 'pastslack'. 
+Configure-o para iniciar junto com a sua sessão.
+
+====== Observações ======
+
+Não há necessidade de outros gerenciadores de clipboard sendo executados
+junto com pastslack, isso inclue o Clipman (tanto o aplicativo como o applet)
+e também o gerenciador integrado (xfce4-settings-helper).
+
+Não se esqueça de desabilita-los se quiser reduzir ao máximo o uso de recursos.
+
+
