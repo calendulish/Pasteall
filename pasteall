@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 
-#    PastSlack - Um monitor de clipboard para o Slackware
+#    Pasteall - Um monitor de clipboard simples e funcional.
 #    Copyright (C) 2012  Lara Maia <lara@craft.net.br>
 #
 #    Baseado em Pastie - a simple clipboard manager
@@ -39,14 +39,14 @@ except:
 	                    "módulo esteja instalado e funcionando." )
 	errormsg.run()
 	errormsg.destroy()
-	
+
 from fractions import Fraction #FIXME
 
 # Notification
 try:
 	import pynotify
-	if pynotify.init("PastSlack"):
-		n = pynotify.Notification("PastSlack", "O gerenciador de clipboard foi iniciado")
+	if pynotify.init("PasteSlack"):
+		n = pynotify.Notification("Pasteall", "O gerenciador de clipboard foi iniciado")
 		n.show()
 	else:
 		print("Erro ao iniciar o módulo pynotify")
@@ -68,7 +68,7 @@ class ClipboardProtector(object):
 	def check(self, clipboard=None, event=None):
 		if not self.clipboard.wait_for_targets():
 			no_targetted_text = self.clipboard.wait_for_text()
-			if no_targetted_text != None: 
+			if no_targetted_text != None:
 				self.history.add(TextHistoryMenuItem(no_targetted_text))
 			else:
 				if self.history[0] != None:
@@ -87,7 +87,7 @@ class ClipboardProtector(object):
 		elif self.clipboard.wait_is_image_available():
 			clipboard_contents = self.clipboard.wait_for_image()
 			self.history.add(ImageHistoryMenuItem(clipboard_contents))
-	
+
 	def check_specials(self):
 		targets = self.clipboard.wait_for_targets()
 		if targets != None:
@@ -116,14 +116,14 @@ class TextHistoryMenuItem(HistoryMenuItem):
 	def get_label(self):
 		length = 1
 		l = unicode(self.payload[:length+length]).strip(' ')
-		
+
 		if len(l) > length:
 			l = l[:length-1] + u'\u2026'
 
 		l = l.replace('\t', u'\u22c5')
 		l = l.replace('\n', u'\u21b2')
 		l = l.replace('_', '__')
-		
+
 		return l
 
 	def get_long_label(self, search=None):
@@ -157,7 +157,7 @@ class TextHistoryMenuItem(HistoryMenuItem):
 				l = self.payload[:69] + u'\u2026'
 			else:
 				l = self.payload
-		
+
 		return l
 
 	def set_as_current(self, event=None):
@@ -173,21 +173,21 @@ class FileHistoryMenuItem(HistoryMenuItem):
 
 			if constraint < total_length_to_shorten:
 				size_to_reduce = abs(constraint - total_length_to_shorten)
-				
+
 				string_ratio = Fraction(len(pair[0]),len(pair[1])) #FIXME
 				first_ratio, second_ratio = string_ratio.numerator, string_ratio.denominator
 				total = string_ratio.denominator + string_ratio.numerator
-				
+
 				size_of_first_cut = (first_ratio * size_to_reduce / total) + 1
 				first_remainder_size = len(pair[0]) - size_of_first_cut
 				size_of_second_cut = (second_ratio * size_to_reduce / total) + 1
 				second_remainder_size = len(pair[1]) - size_of_second_cut
 
 				first_extreme_size = first_remainder_size/2
-				
+
 				if first_extreme_size == 0:
 					first_extreme_size = 1
-				
+
 				second_extreme_size = second_remainder_size/2
 				if second_extreme_size == 0:
 					second_extreme_size = 1
@@ -198,7 +198,7 @@ class FileHistoryMenuItem(HistoryMenuItem):
 				second = pair[1][:second_extreme_size] + u"\u2026" + pair[1][second_extreme_size+size_of_second_cut:]
 				if len(second) == len(pair[1]):
 					second = pair[1]
-				
+
 				# we might have missed it by 1
 				preliminary_lenght = len(first) + len(second)
 				if preliminary_lenght > constraint:
@@ -210,18 +210,18 @@ class FileHistoryMenuItem(HistoryMenuItem):
 						size_of_second_cut + 1:]
 
 				return first, second
-			
+
 			else: # we don't have to shorten the pair
 				return pair
 
 		lines = self.payload.split("\n")
-		
+
 		# we want to see if there are more files than the one shown
 		if len(lines) > 1:
 			label = "  (+ " + str(len(lines)-1) + " " + _("more") + ") "
 		else:
 			label = ""
-		
+
 		# we'll want to see if it's a regular file or a dir
 		if os.path.isdir(lines[0]):
 			first_file_tail = "/"
@@ -253,7 +253,7 @@ class FileHistoryMenuItem(HistoryMenuItem):
 
 		name_part = first_file + label
 		path_part = " [ " + common_path + " ]"
-		
+
 		l = u"\u25A4 " + name_part + path_part
 		l = l.replace("_", "__")
 		return l
@@ -288,7 +288,7 @@ class ImageHistoryMenuItem(HistoryMenuItem):
 		gobject.GObject.__init__(self)
 		self.pixbuf = item
 		self.payload = self.pixbuf.get_pixels()
-	
+
 	def get_label(self):
 		l = u"\u25A3 [" + str(self.pixbuf.props.width) + u"\u2715" + str(self.pixbuf.props.height) + "]"
 		return l
@@ -310,7 +310,7 @@ class HistoryMenuItemCollector(gobject.GObject):
 
 	def __len__(self):
 		return len(self.data)
-	
+
 	def __iter__(self):
 		return self
 
@@ -341,17 +341,17 @@ class HistoryMenuItemCollector(gobject.GObject):
 				return count
 			count = count + 1
 		return -1
-    
+
 	def add(self,data):
-		if not self.exists(data): 
-			if len(self.data) == 0: 
-				self.data.append(data)              
-			else:                    
+		if not self.exists(data):
+			if len(self.data) == 0:
+				self.data.append(data)
+			else:
 				tail = self.data[0:self.maxlen - 1]
-				for i in self.data: 
-					del i               
-				self.data = []          
-				self.data.append(data)     
+				for i in self.data:
+					del i
+				self.data = []
+				self.data.append(data)
 				for item in tail:
 					self.data.append(item)
 		else:

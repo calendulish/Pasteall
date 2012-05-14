@@ -1,25 +1,19 @@
-====== PastSlack ======
+====== pasteall ======
 
-PastSlack é um gerenciador de clipboard para o slackware, escrito
-com o intuito de substituir o ClipMan e o gerenciador integrado
-(xfce4-settings-helper) do xfce.
-
-O PastSlack é baseado no Pastie, um gerenciador de clipboard para
-ubuntu escrito por Felipe Morales.
-
-====== Objetivos =======
-
-O objetivo principal do PastSlack é permitir que você feche janelas
+O objetivo principal do pasteall é permitir que você feche janelas
 e tenha certeza de que o conteúdo copiado se mantenha em seu clipboard.
 Existe várias ferramentas que fazem esta tarefa, mas são desnecessáriamente
-pesadas e/ou possuem recursos desnecessários. O PastSlack procura ser leve
+pesadas e/ou possuem recursos desnecessários. O pasteall procura ser leve
 e realizar apenas a tarefa realmente necessária, que é a de 'segurar' a
 informação no clipboard.
 
+O pasteall foi baseado no Pastie, um gerenciador de clipboard para
+ubuntu, escrito por Felipe Morales.
+
 ====== Interface ======
 
-Diferente de outros, o PastSlack não possue interface, ele roda como um daemon
-e atua em background no sistema, você nem percebe que ele está lá.
+Diferente de outros, o pasteall não possue interface, ele roda como um
+daemon e atua em background no sistema, você nem percebe que ele está lá.
 
 ====== Instalação ======
 
@@ -29,15 +23,5 @@ python setup.py build
 2) Instale:
 sudo python setup.py install
 
-O PastSlack pode ser acessado pelo comando 'pastslack'. 
+O pasteall pode ser acessado pelo comando 'pasteall'.
 Configure-o para iniciar junto com a sua sessão.
-
-====== Observações ======
-
-Não há necessidade de outros gerenciadores de clipboard sendo executados
-junto com pastslack, isso inclue o Clipman (tanto o aplicativo como o applet)
-e também o gerenciador integrado (xfce4-settings-helper).
-
-Não se esqueça de desabilita-los se quiser reduzir ao máximo o uso de recursos.
-
-

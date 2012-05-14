@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Este arquivo faz parte do PastSlack
+# Este arquivo faz parte do Pasteall
 
 import os
 import os.path
@@ -11,11 +11,11 @@ from distutils.command.install import install
 from distutils.command.install_data import install_data
 
 setup(
-	name = "PastSlack",
-	description = "Um monitor de clipboard para o Slackware",
+	name = "Pasteall",
+	description = "Um monitor de clipboard simples e funcional.",
 	author = "Lara Maia",
 	author_email = "lara@craft.net.br",
-	url = "http://github.com/mrk3004/PastSlack/",
+	url = "http://github.com/mrk3004/Pasteall/",
 	license = "GNU GPL v3",
 	version = "0.0.2",
-	scripts = ["pastslack"])
+	scripts = ["pasteall"])
