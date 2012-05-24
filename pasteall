@@ -33,15 +33,26 @@ import gio
 from fractions import Fraction #FIXME
 
 # Notification
+n_title = "Pasteall"
+n_msg = "O gerenciador de clipboard foi iniciado."
+n_erro = "Erro ao iniciar o módulo pynotify."
 try:
 	import pynotify
-	if pynotify.init("PasteSlack"):
-		n = pynotify.Notification("Pasteall", "O gerenciador de clipboard foi iniciado")
+	if pynotify.init("Pasteall"):
+		n = pynotify.Notification(n_title, n_msg)
 		n.show()
 	else:
-		print("Erro ao iniciar o módulo pynotify")
+		print(n_erro)
 except:
-	print("Módulo pynotify não encontrado. Ignorando.");
+	try:
+		from gi.repository import Notify
+		if Notify.init("Pasteall"):
+			n = Notify.Notification.new(n_title, n_msg, "dialog_information")
+			n.show()
+		else:
+			print(n_erro)
+	except:
+		print("Módulo pynotify não encontrado. Ignorando...");
 
 class ClipboardProtector(object):
 	def __init__(self):
