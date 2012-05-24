@@ -17,5 +17,5 @@ setup(
 	author_email = "lara@craft.net.br",
 	url = "http://github.com/mrk3004/Pasteall/",
 	license = "GNU GPL v3",
-	version = "0.0.2",
+	version = "0.0.3",
 	scripts = ["pasteall"])
