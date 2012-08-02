@@ -29,17 +29,7 @@ import os.path
 
 # History
 import gobject
-try:
-	import gnomevfs #FIXME
-except:
-	errormsg = gtk.MessageDialog(None, 0, gtk.MESSAGE_ERROR, gtk.BUTTONS_OK)
-	errormsg.set_markup("O módulo gnomevfs não foi encontrado.\n\n" +
-	                    "Ao copiar arquivos ou pastas o seu clipboard\n" +
-	                    "pode não funcionar corretamente, até que o\n" +
-	                    "módulo esteja instalado e funcionando." )
-	errormsg.run()
-	errormsg.destroy()
-
+import gio
 from fractions import Fraction #FIXME
 
 # Notification
@@ -267,8 +257,8 @@ class FileHistoryMenuItem(HistoryMenuItem):
 			files = path.split("\n")
 			file_paths = []
 			for copied_file in files:
-				file_path = gnomevfs.escape_path_string(copied_file) #FIXME
-				file_paths.append('file://' + file_path)
+				file_path = gio.File(copied_file)
+				file_paths.append(gfile.get_uri())
 			selectiondata.set_uris(file_paths)
 			selectiondata.set('x-special/gnome-copied-files', 8, 'copy\n' + '\n'.join(file_paths))
 
